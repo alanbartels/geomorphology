@@ -14,95 +14,58 @@ logging.basicConfig(filename=f'F:/UMB/Geomorphology/logs/{datetime.datetime.now(
                     level=logging.DEBUG)
 
 
-def parallel_process(file_set):
+def parallel_process(slice_list):
     # Split out the information from the file set
-    spec_path = file_set[0][0]
-    input_path = file_set[0][1]
-    timepoint = file_set[0][2]
-    slice = file_set[0][3]
+    spec_path = slice_list[0][0]
+    input_path = slice_list[0][1]
+    slice = slice_list[0][2]
 
     # Make a Grid object
     grid = c_voxels.Grid(spec_path=spec_path,
                          input_path=input_path)
-    # For each scan position in the set
-    for scan_position in file_set[1]:
-        # Assemble the file path
-        file_path = Path(input_path, f'{slice}_{scan_position}_{timepoint}.txt')
-        # Log info
-        logging.info(f'Processing {file_path}.')
-        # Have the grid process the file
-        grid.process_point_cloud(file_path, summary_stats=False, export_file=False)
-        # Log info
-        logging.info(f'Finished processing {file_path}.')
-    # Now all scans are done, generate summary stats
-    # Iterate over the voxels
-    # For each voxel X
-    for vox_x in grid.voxels.keys():
-        # For each voxel Z
-        for vox_z in grid.voxels[vox_x].keys():
-            # Reference the voxel object
-            curr_voxel = grid.voxels[vox_x][vox_z]
-            # Generate summary stats
-            curr_voxel.generate_summary_stats()
-    # Output directory
-    output_dir = Path(f'F:/UMB/Geomorphology/output/{grid.name}/slice_timepoint/')
-    # If the output directory for this grid does not exist
-    if not exists(output_dir):
-        # Make it
-        mkdir(output_dir)
 
-    # Output dictionary
-    output_dict = {'Grid Name': grid.name,
-                   'Timepoint Name': timepoint,
-                   'Slice Name': slice,
-                   'Voxels': {}}
-    # Transfer keys and results
-    for vox_x in grid.voxels.keys():
-        output_dict['Voxels'][vox_x] = {}
-        for vox_z in grid.voxels[vox_x].keys():
-            output_dict['Voxels'][vox_x][vox_z] = grid.voxels[vox_x][vox_z].flatten()
-    # Assemble the output path
-    output_path = Path(output_dir, f'{slice}_{timepoint}.json.')
-    # Log before output
-    logging.info(f'Exporting to {output_path}')
-    # Open output file
-    with open(output_path, 'w') as of:
-        json.dump(output_dict, of)
-    # Log after output
-    logging.info(f'Export to {output_path} complete.')
+    # Log info
+    logging.info(f'Processing Slice {slice}.')
+
+    # Derive events for the slice
+    grid.derive_all_events_for_slice(slice, slice_list[1])
+
+    # Log info
+    logging.info(f'Finished processing Slice {slice}.')
 
 
 def main(spec_path, input_path):
-    # List for file sets
-    file_set_list = []
+    # List for slices
+    slice_list = []
     # Make a Grid object
     grid = c_voxels.Grid(spec_path=Path(spec_path),
                          input_path=Path(input_path))
     # Assess the structure of the project
     grid.assess_project_structure()
-
-    # Specify output directory path
-    output_path = Path(f'F:/UMB/Geomorphology/output/{grid.name}/slice_timepoint/')
-    # If the path does not exist
-    if not exists(output_path):
+    # Assemble the file directory
+    dir_path = Path(grid.input_path.parents[1], 'output', grid.name, 'change')
+    # If the output direction does not exist
+    if not exists(dir_path):
         # Make it
-        mkdir(output_path)
+        mkdir(dir_path)
+    # Dictionary for slices
+    slices = {}
     # For each timepoint
     for timepoint in grid.proj_struct.keys():
         # For each slice
         for slice in grid.proj_struct[timepoint].keys():
-            # If the output file already exists
-            if exists(Path(output_path, f'{slice}_{timepoint}.json')):
-                # Log it
-                logging.info(f'Output file {slice}_{timepoint}.json already exists, skipping.')
-                # Skip it
-                continue
-            # Add the file set to the list
-            file_set_list.append([(spec_path, input_path, timepoint, slice), grid.proj_struct[timepoint][slice]])
-
+            # If the slice is not in the list
+            if slice not in slices:
+                # Add it
+                slices[slice] = []
+            # Add the timepoint to the slice
+            slices[slice].append(timepoint)
+    # For each slice
+    for slice in slices.keys():
+        slice_list.append([(spec_path, input_path, slice), slices[slice]])
     # Make a process pool executor
     with ProcessPoolExecutor(max_workers=3) as executor:
-        executor.map(parallel_process, file_set_list)
+        executor.map(parallel_process, slice_list)
 
 
 if __name__ == '__main__':
