@@ -7,6 +7,8 @@ from pathlib import Path
 from numpy import floor
 import numpy as np
 import logging
+from matplotlib import pyplot as plt
+import matplotlib as mpl
 
 
 class Grid:
@@ -31,6 +33,8 @@ class Grid:
         self.timepoints = {}
         # Dictionary of voxels. Nested keys [X][Z]
         self.voxels = {}
+        # Dictionary of events
+        self.events = {}
 
         # If a path to a grid specification file was provided
         if self.spec_path:
@@ -343,6 +347,12 @@ class Grid:
             with open(output_path, 'w') as of:
                 json.dump(pair_results, of)
 
+    def order_timepoints(self, first_tp, second_tp):
+        if int(first_tp[2:]) < int(second_tp[2:]):
+            return first_tp, second_tp
+        else:
+            return second_tp, first_tp
+
     # Derive all loss & gain events from a pair or timepoints
     def derive_events_from_timepoints(self, first_tp, second_tp):
         # Dictionary for results
@@ -431,8 +441,10 @@ class Grid:
                 else:
                     # Increment event counter
                     curr_event.count += 1
-                # Set up a dictionary for it
-                results_dict[curr_event.count] = {}
+                # If there is no dictionary for the event
+                if curr_event.count not in results_dict.keys():
+                    # Set up a dictionary for it
+                    results_dict[curr_event.count] = {}
                 results_dict[curr_event.count][curr_vox_z] = []
                 # If the row is not in the timepoint 1
                 if curr_vox_z not in first_col.keys():
@@ -474,10 +486,16 @@ class Grid:
                 else:
                     # Increment event counter
                     curr_event.count += 1
-                # Set up a dictionary for it
-                results_dict[curr_event.count] = {}
+                # If there is no dictionary for the event
+                if curr_event.count not in results_dict.keys():
+                    # Set up a dictionary for it
+                    results_dict[curr_event.count] = {}
                 # Add the voxel and change to the current event
                 results_dict[curr_event.count][curr_vox_z] = change
+            # If first voxel still active
+            if first_voxel:
+                # Flip switch
+                first_voxel = False
         # Return the results dictionary
         return results_dict
 
@@ -555,6 +573,240 @@ class Grid:
                                  f'{(int(vox_z) * self.voxel_size) + (self.voxel_size / 2)}, '
                                  f'{distance_stats[4]}, {distance_stats[4] / distance_stats[2]}')
 
+    def load_events(self, slice, first_tp, second_tp):
+        # Order the timepoints correctly
+        first_tp, second_tp = self.order_timepoints(first_tp, second_tp)
+        # Assemble the directory path
+        dir_path = Path(self.input_path.parents[1], 'output', self.name, 'change', 'slice_timepoint_pairs')
+        # Assemble the file path
+        file_path = Path(dir_path, f'{slice}_{first_tp}_{second_tp}.json')
+        # Open the file
+        with open(file_path, mode='r') as f:
+            # Retrieve the dictionary
+            input_dict = json.load(f)
+        # For each column in the input dictionary
+        for col in input_dict.keys():
+            # For each event in the column
+            for event_number in input_dict[col].keys():
+                # Get the first voxel key
+                first_voxel_key = list(input_dict[col][event_number].keys())[0]
+                # If there is a list in the event (i.e. there were missing data)
+                if isinstance(input_dict[col][event_number][first_voxel_key], list):
+                    # Create a MissingObservation object
+                    new_obs = MissingObservation()
+                    # Transfer the values
+                    new_obs.voxels = input_dict[col][event_number]
+                    # Store the object
+                    if col not in self.voxels.keys():
+                        self.voxels[col] = {}
+                    self.voxels[col][event_number] = new_obs
+                # If it was a gain or loss event
+                else:
+                    # Create an Event object
+                    new_event = Event()
+                    # Transfer the values
+                    new_event.voxels = input_dict[col][event_number]
+                    new_event.grid = self
+                    new_event.timepoints = [first_tp, second_tp]
+                    # If it is a gain event
+                    if new_event.voxels[first_voxel_key] > 0:
+                        new_event.type = 'Gain'
+                    elif new_event.voxels[first_voxel_key] < 0:
+                        new_event.type = 'Loss'
+                    else:
+                        new_event.type = 'No Change'
+                    # Store the object
+                    if col not in self.voxels.keys():
+                        self.voxels[col] = {}
+                    self.voxels[col][event_number] = new_event
+
+    def get_event_summary(self, slice, first_tp, second_tp):
+        # Make sure the timepoints are ordered correctly
+        first_tp, second_tp = self.order_timepoints(first_tp, second_tp)
+        # Counts
+        gain_count = 0
+        loss_count = 0
+        no_change_count = 0
+        missing_data_count = 0
+        # For each col
+        for col in self.voxels.keys():
+            # For each event number
+            for event_number in self.voxels[col].keys():
+                # Get event obj
+                curr_event = self.voxels[col][event_number]
+                # If it's a MissingObservation obj
+                if isinstance(curr_event, MissingObservation):
+                    missing_data_count += len(list(curr_event.voxels.keys()))
+                    # Skip the rest of the loop
+                    continue
+                # If it's gain
+                if curr_event.type == 'Gain':
+                    gain_count += 1
+                elif curr_event.type == 'Loss':
+                    loss_count += 1
+                elif curr_event.type == 'No Change':
+                    no_change_count += 1
+
+        # Print a summary
+        print(f'For slice {slice} change ({second_tp} - {first_tp}).')
+        print(f'There were {gain_count} Gain events, {loss_count} Loss events, and {no_change_count} No Change events.')
+        print(f'There were {missing_data_count} voxels with missing data.')
+
+    def visualize_events(self, slice, first_tp, second_tp):
+        # Make sure the timepoints are ordered correctly
+        first_tp, second_tp = self.order_timepoints(first_tp, second_tp)
+        # Mins and maxes
+        min_row = None
+        max_row = None
+        min_col = None
+        max_col = None
+
+        # Get row and col extents
+        for col in self.voxels.keys():
+            if min_col is None:
+                min_col = int(col)
+            elif int(col) < min_col:
+                min_col = int(col)
+            if max_col is None:
+                max_col = int(col)
+            elif int(col) > max_col:
+                max_col = int(col)
+            for event_number in self.voxels[col].keys():
+                for row in self.voxels[col][event_number].voxels.keys():
+                    if min_row is None:
+                        min_row = int(row)
+                    elif int(row) < min_row:
+                        min_row = int(row)
+                    if max_row is None:
+                        max_row = int(row)
+                    elif int(row) > max_row:
+                        max_row = int(row)
+
+        # Visualization array
+        vis_arr = np.zeros(((max_row - min_row) + 1, (max_col - min_col) + 1))
+
+        change_arr = np.zeros(((max_row - min_row) + 1, (max_col - min_col) + 1))
+
+        # Get row and col extents
+        for col in self.voxels.keys():
+            for event_number in self.voxels[col].keys():
+                # Get the object
+                curr_obj = self.voxels[col][event_number]
+                if isinstance(curr_obj, Event):
+                    for row in self.voxels[col][event_number].voxels.keys():
+                        array_row = (max_row - min_row) - (int(row) - min_row)
+                        array_col = int(col) - min_col
+                        if curr_obj.type == 'Gain':
+                            vis_arr[array_row, array_col] = 1
+                        elif curr_obj.type == 'Loss':
+                            vis_arr[array_row, array_col] = -1
+                        else:
+                            vis_arr[array_row, array_col] = 0
+                        #try:
+                        change_arr[array_row, array_col] = curr_obj.voxels[row]
+                        #except:
+                        #    print(curr_obj.voxels[row])
+                        #    print(isinstance(curr_obj, Event))
+                        #    print(curr_obj.voxels)
+
+                        #vis_arr[int(row) - min_row, int(col) - min_col] = self.voxels[col][event_number].voxels[row]
+        # Make a figure
+        fig = plt.figure(figsize=(12, 12))
+        # Make some space between the subplots4.
+        # plt.subplots_adjust(hspace=0.3)
+        # Start a subplot
+        ax = fig.add_subplot(1, 2, 1)
+        # Scatter the night time lights against the "days of study"
+        array_map = ax.imshow(vis_arr)
+        #color_m = Colormap()
+        #ax.plot([0, 0], [0, 15], c='k')
+        ax.set_ylabel('Rows')
+        ax.set_xlabel('Columns')
+        ax.set_title(f'Change for Slice {slice} ({second_tp} - {first_tp})')
+        plt.colorbar(array_map)
+
+        ax = fig.add_subplot(1, 2, 2)
+
+        norm = mpl.colors.Normalize(vmin=-2, vmax=2)
+        # Make a scalar mappable (including color map)
+        my_cmap = mpl.cm.ScalarMappable(norm=norm, cmap='RdYlBu')
+        # Scatter the night time lights against the "days of study"
+        array_map = ax.imshow(change_arr, cmap=my_cmap.cmap, norm=norm)
+
+        plt.colorbar(array_map)
+        # color_m = Colormap()
+        # ax.plot([0, 0], [0, 15], c='k')
+        ax.set_ylabel('Rows')
+        ax.set_xlabel('Columns')
+        ax.set_title(f'Change for Slice {slice} ({second_tp} - {first_tp})')
+
+        plt.show()
+
+    def scatter_events(self, slice, first_tp, second_tp):
+        # Make sure the timepoints are ordered correctly
+        first_tp, second_tp = self.order_timepoints(first_tp, second_tp)
+        # Mins and maxes
+        #min_row = None
+        #max_row = None
+        #min_col = None
+        #max_col = None
+
+        # Get row and col extents
+        #for col in self.voxels.keys():
+        #    if min_col is None:
+        #        min_col = int(col)
+        #    elif int(col) < min_col:
+        #        min_col = int(col)
+        #    if max_col is None:
+        #        max_col = int(col)
+        #    elif int(col) > max_col:
+        #        max_col = int(col)
+        #    for event_number in self.voxels[col].keys():
+        #        for row in self.voxels[col][event_number].voxels.keys():
+        #            if min_row is None:
+        #                min_row = int(row)
+        #            elif int(row) < min_row:
+        #                min_row = int(row)
+        #            if max_row is None:
+        #                max_row = int(row)
+        #            elif int(row) > max_row:
+        #                max_row = int(row)
+        rows = []
+        cols = []
+        change = []
+        # Visualization array
+        #vis_arr = np.zeros(((max_row - min_row) + 1, (max_col - min_col) + 1))
+        # Get row and col extents
+        for col in self.voxels.keys():
+            for event_number in self.voxels[col].keys():
+                # Get the object
+                curr_obj = self.voxels[col][event_number]
+
+                for row in curr_obj.voxels.keys():
+                    rows.append(int(row))
+                    cols.append(int(col))
+                    if isinstance(curr_obj, Event):
+                        change.append(curr_obj.voxels[row])
+                    else:
+                        change.append(0)
+
+                        #vis_arr[int(row) - min_row, int(col) - min_col] = self.voxels[col][event_number].voxels[row]
+        # Make a figure
+        fig = plt.figure(figsize=(12, 12))
+        # Make some space between the subplots4.
+        # plt.subplots_adjust(hspace=0.3)
+        # Start a subplot
+        ax = fig.add_subplot(1, 1, 1)
+        # Scatter the night time lights against the "days of study"
+        array_map = ax.scatter(cols, rows, s=1, c=change)
+        #color_m = Colormap()
+        #ax.plot([0, 0], [0, 15], c='k')
+        ax.set_ylabel('Rows')
+        ax.set_xlabel('Columns')
+        ax.set_title(f'Change for Slice {slice} ({second_tp} - {first_tp})')
+        plt.colorbar(array_map)
+
+        plt.show()
 
 class Timepoint:
 
@@ -704,14 +956,29 @@ class EventParser:
 
         # Event counter
         self.count = 0
-        # Current Event object
-        self.obj = Event()
         # Event type
         self.type = None
 
+
+class ChangeVoxel:
+
+    def __init__(self):
+
+        self.value = None
+        self.type = None
+        self.timepoints = []
+
+class MissingObservation:
+
+    def __init__(self):
+
+        self.voxels = {}
 
 class Event:
 
     def __init__(self):
 
         self.voxels = {}
+        self.timepoints = None
+        self.grid = None
+        self.type = None
