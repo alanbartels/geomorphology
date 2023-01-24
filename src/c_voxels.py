@@ -702,14 +702,7 @@ class Grid:
                             vis_arr[array_row, array_col] = -1
                         else:
                             vis_arr[array_row, array_col] = 0
-                        #try:
                         change_arr[array_row, array_col] = curr_obj.voxels[row]
-                        #except:
-                        #    print(curr_obj.voxels[row])
-                        #    print(isinstance(curr_obj, Event))
-                        #    print(curr_obj.voxels)
-
-                        #vis_arr[int(row) - min_row, int(col) - min_col] = self.voxels[col][event_number].voxels[row]
         # Make a figure
         fig = plt.figure(figsize=(12, 12))
         # Make some space between the subplots4.
@@ -742,71 +735,6 @@ class Grid:
 
         plt.show()
 
-    def scatter_events(self, slice, first_tp, second_tp):
-        # Make sure the timepoints are ordered correctly
-        first_tp, second_tp = self.order_timepoints(first_tp, second_tp)
-        # Mins and maxes
-        #min_row = None
-        #max_row = None
-        #min_col = None
-        #max_col = None
-
-        # Get row and col extents
-        #for col in self.voxels.keys():
-        #    if min_col is None:
-        #        min_col = int(col)
-        #    elif int(col) < min_col:
-        #        min_col = int(col)
-        #    if max_col is None:
-        #        max_col = int(col)
-        #    elif int(col) > max_col:
-        #        max_col = int(col)
-        #    for event_number in self.voxels[col].keys():
-        #        for row in self.voxels[col][event_number].voxels.keys():
-        #            if min_row is None:
-        #                min_row = int(row)
-        #            elif int(row) < min_row:
-        #                min_row = int(row)
-        #            if max_row is None:
-        #                max_row = int(row)
-        #            elif int(row) > max_row:
-        #                max_row = int(row)
-        rows = []
-        cols = []
-        change = []
-        # Visualization array
-        #vis_arr = np.zeros(((max_row - min_row) + 1, (max_col - min_col) + 1))
-        # Get row and col extents
-        for col in self.voxels.keys():
-            for event_number in self.voxels[col].keys():
-                # Get the object
-                curr_obj = self.voxels[col][event_number]
-
-                for row in curr_obj.voxels.keys():
-                    rows.append(int(row))
-                    cols.append(int(col))
-                    if isinstance(curr_obj, Event):
-                        change.append(curr_obj.voxels[row])
-                    else:
-                        change.append(0)
-
-                        #vis_arr[int(row) - min_row, int(col) - min_col] = self.voxels[col][event_number].voxels[row]
-        # Make a figure
-        fig = plt.figure(figsize=(12, 12))
-        # Make some space between the subplots4.
-        # plt.subplots_adjust(hspace=0.3)
-        # Start a subplot
-        ax = fig.add_subplot(1, 1, 1)
-        # Scatter the night time lights against the "days of study"
-        array_map = ax.scatter(cols, rows, s=1, c=change)
-        #color_m = Colormap()
-        #ax.plot([0, 0], [0, 15], c='k')
-        ax.set_ylabel('Rows')
-        ax.set_xlabel('Columns')
-        ax.set_title(f'Change for Slice {slice} ({second_tp} - {first_tp})')
-        plt.colorbar(array_map)
-
-        plt.show()
 
 class Timepoint:
 
