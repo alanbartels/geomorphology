@@ -735,6 +735,127 @@ class Grid:
 
         plt.show()
 
+    def visualize_change_profile(self, x_co):
+        # Make a figure
+        fig = plt.figure(figsize=(12, 12))
+        # Start a subplot
+        ax = fig.add_subplot(1, 1, 1)
+
+        max_row = None
+        min_row = None
+
+        # For each event in the col
+        for event_number in self.voxels[x_co].keys():
+            # Reference the event
+            curr_event = self.voxels[x_co][event_number]
+            # If the event is a missing observation
+            if isinstance(curr_event, MissingObservation):
+                # Set the color for the patch
+                color = 'k'
+                # Skip it
+                continue
+
+            elif isinstance(curr_event, Event):
+                # For each voxel in the path (row)
+                for row in curr_event.voxels.keys():
+                    if max_row is None:
+                        max_row = int(row)
+                    elif int(row) > max_row:
+                        max_row = int(row)
+                    if min_row is None:
+                        min_row = int(row)
+                    elif int(row) < min_row:
+                        min_row = int(row)
+                    # Get change volume
+                    curr_vol = self.get_voxel_volume(curr_event.voxels[row])
+                    # If event is a gain
+                    if curr_event.type == 'Gain':
+                        # Add the patch to the plot
+                        curr_patch = mpl.patches.Rectangle((0, int(row) - 0.5),
+                                                           width=curr_vol,
+                                                           height=1,
+                                                           fill=True,
+                                                           facecolor='b')
+                    # Otherwise, if it's a loss
+                    elif curr_event.type == 'Loss':
+                        # Add the patch to the plot
+                        curr_patch = mpl.patches.Rectangle((0 + curr_vol, int(row) - 0.5),
+                                                           width=abs(curr_vol),
+                                                           height=1,
+                                                           fill=True,
+                                                           facecolor='r')
+                    ax.add_patch(curr_patch)
+
+        ax.plot((0, 0), (max_row, min_row), 'k')
+
+        plt.show()
+
+    def visualize_cumulative_profile(self, x_co):
+
+        # Make a figure
+        fig = plt.figure(figsize=(12, 12))
+        # Start a subplot
+        ax = fig.add_subplot(1, 1, 1)
+
+        max_row = None
+        min_row = None
+
+        # Current cumulative change
+        curr_change = 0
+
+        # For each event in the col
+        for event_number in sorted(self.voxels[x_co].keys(), key=int):
+            # Reference the event
+            curr_event = self.voxels[x_co][event_number]
+            # If the event is a missing observation
+            if isinstance(curr_event, MissingObservation):
+                # Set the color for the patch
+                color = 'k'
+                # Skip it
+                continue
+
+            elif isinstance(curr_event, Event):
+                # For each voxel in the path (row)
+                for row in curr_event.voxels.keys():
+                    if max_row is None:
+                        max_row = int(row)
+                    elif int(row) > max_row:
+                        max_row = int(row)
+                    if min_row is None:
+                        min_row = int(row)
+                    elif int(row) < min_row:
+                        min_row = int(row)
+                # For each row (sorted top to bottom)
+                for row in sorted(curr_event.voxels.keys(), key=int, reverse=True):
+                    # Update current change
+                    curr_change += curr_event.voxels[row]
+                    # Get volume
+                    curr_vol = self.get_voxel_volume(curr_change)
+                    # If we are in cumulative gain (change > 0)
+                    if curr_change > 0:
+                        # Add the patch to the plot
+                        curr_patch = mpl.patches.Rectangle((0, int(row) - 0.5),
+                                                           width=curr_vol,
+                                                           height=1,
+                                                           fill=True,
+                                                           facecolor='b')
+                    # Otherwise, if it's a loss
+                    elif curr_change < 0:
+                        # Add the patch to the plot
+                        curr_patch = mpl.patches.Rectangle((0 + curr_vol, int(row) - 0.5),
+                                                           width=abs(curr_vol),
+                                                           height=1,
+                                                           fill=True,
+                                                           facecolor='r')
+                    ax.add_patch(curr_patch)
+
+        ax.plot((0, 0), (max_row, min_row), 'k')
+
+        plt.show()
+
+    def get_voxel_volume(self, dimension):
+        return dimension * (self.voxel_size ** 2)
+
 
 class Timepoint:
 
@@ -896,11 +1017,13 @@ class ChangeVoxel:
         self.type = None
         self.timepoints = []
 
+
 class MissingObservation:
 
     def __init__(self):
 
         self.voxels = {}
+
 
 class Event:
 
@@ -910,3 +1033,41 @@ class Event:
         self.timepoints = None
         self.grid = None
         self.type = None
+        self.volume = None
+
+    def get_volume(self):
+
+        # Set volume to 0
+        self.volume = 0
+        # For each row
+        for row in self.voxels.keys():
+            # Add the change
+            self.volume += self.voxels[row]
+
+    def get_row_change_plot_vars(self):
+        # Lists for plotting variable
+        rows = []
+        change = []
+        # For each row (sorted top to bottom)
+        for row in sorted(self.voxels.keys(), key=int, reverse=True):
+            # Store the values
+            rows.append(int(row))
+            change.append(self.voxels[row])
+        # Return the plotting variables
+        return rows, change
+
+    def get_cumulative_change_plot_vars(self):
+        # Lists for plotting variable
+        rows = []
+        change = []
+        # Current cumulative change
+        curr_change = 0
+        # For each row (sorted top to bottom)
+        for row in sorted(self.voxels.keys(), key=int, reverse=True):
+            # Update current change
+            curr_change += self.voxels[row]
+            # Store the values
+            rows.append(int(row))
+            change.append(curr_change)
+        # Return the plotting variables
+        return rows, change

@@ -31,4 +31,8 @@ for slice_num in list(range(0, 23)):
 
     grid.get_event_summary(slice, first_tp, second_tp)
 
-    grid.visualize_events(slice, first_tp, second_tp)
+    #grid.visualize_events(slice, first_tp, second_tp)
+
+    #grid.visualize_cumulative_profile(list(grid.voxels.keys())[0])
+
+    grid.visualize_change_profile(list(grid.voxels.keys())[0])
