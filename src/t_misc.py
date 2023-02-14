@@ -4,13 +4,13 @@ import datetime
 from pathlib import Path
 
 # Set the logging config
-logging.basicConfig(filename=f'F:/UMB/Geomorphology/logs/{datetime.datetime.now():%Y%m%d%H%M%S}.log',
+logging.basicConfig(filename=f'C:/UMB/Geomorphology/logs/{datetime.datetime.now():%Y%m%d%H%M%S}.log',
                     filemode='w',
                     format=' %(levelname)s - %(asctime)s - %(message)s',
                     level=logging.DEBUG)
 
-spec_path = Path(r'F:\UMB\Geomorphology\support\grid_rainsford')
-input_path = Path(r'F:\UMB\Geomorphology\input\07_top_bot_sliced_trimmed_rotated_pointcloud')
+spec_path = Path(r'C:\UMB\Geomorphology\support\grid_rainsford')
+input_path = Path(r'C:\UMB\Geomorphology\input\07_top_bot_sliced_trimmed_rotated_pointcloud')
 
 
 first_tp = 'TP2'
