@@ -620,6 +620,15 @@ class Grid:
                         self.voxels[col] = {}
                     self.voxels[col][event_number] = new_event
 
+    def get_mean_event_count_per_col(self):
+        # Event counts
+        event_counts = []
+        # For each column
+        for col_key in self.voxels.keys():
+            event_counts.append(len(list(self.voxels[col_key].keys())))
+        # Return the mean
+        return np.mean(event_counts)
+
     def get_event_summary(self, slice, first_tp, second_tp):
         # Make sure the timepoints are ordered correctly
         first_tp, second_tp = self.order_timepoints(first_tp, second_tp)
@@ -1035,7 +1044,7 @@ class Event:
         self.type = None
         self.volume = None
 
-    def get_volume(self):
+    def set_volume(self):
 
         # Set volume to 0
         self.volume = 0
@@ -1043,6 +1052,42 @@ class Event:
         for row in self.voxels.keys():
             # Add the change
             self.volume += self.voxels[row]
+
+    def get_volume(self):
+        # If volume is not set
+        if not self.volume:
+            # Set it
+            self.set_volume()
+        # Return the volume
+        return self.volume
+
+    # Return the mean height of voxels for the event
+    def get_mean_height(self):
+        row_total = 0
+        # For each row key
+        for row_key in self.voxels.keys():
+            # Add to total
+            row_total += int(row_key)
+        # Return the mean
+        return (row_total / len(list(self.voxels.keys()))) * self.grid.voxel_size
+
+    def get_min_height(self):
+        return int(sorted(list(self.voxels.keys()), key=int)[0]) * self.grid.voxel_size
+
+    def get_max_height(self):
+        return int(sorted(list(self.voxels.keys()), key=int)[-1]) * self.grid.voxel_size
+
+    def get_height_range(self):
+        return self.get_max_height() - self.get_min_height()
+
+    def get_coeff_var(self):
+        # Values for event
+        event_values = []
+        # For row key
+        for row_key in self.voxels.keys():
+            event_values.append(self.voxels[row_key])
+        # Return STDev/Mean
+        return np.std(event_values) / np.mean(event_values)
 
     def get_row_change_plot_vars(self):
         # Lists for plotting variable

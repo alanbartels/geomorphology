@@ -5,7 +5,7 @@ y_vals = []
 colors = []
 
 row_count = 0
-for row in open(r"F:\UMB\Geomorphology\output\stats_project\20.csv", 'r'):
+for row in open(r"C:\UMB\Geomorphology\output\stats_project\20.csv", 'r'):
     if row_count == 0:
         row_count += 1
         continue
@@ -19,7 +19,7 @@ for row in open(r"F:\UMB\Geomorphology\output\stats_project\20.csv", 'r'):
         colors.append('b')
 
 # Make a figure
-fig = plt.figure(figsize=(9, 16))
+fig = plt.figure(figsize=(3, 5))
 # Make some space between the subplots4.
 #plt.subplots_adjust(hspace=0.3)
 # Start a subplot

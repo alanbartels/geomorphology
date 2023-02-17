@@ -8,7 +8,7 @@ import c_voxels
 import json
 
 # Set the logging config
-logging.basicConfig(filename=f'F:/UMB/Geomorphology/logs/{datetime.datetime.now():%Y%m%d%H%M%S}.log',
+logging.basicConfig(filename=f'C:/UMB/Geomorphology/logs/{datetime.datetime.now():%Y%m%d%H%M%S}.log',
                     filemode='w',
                     format=' %(levelname)s - %(asctime)s - %(message)s',
                     level=logging.DEBUG)
