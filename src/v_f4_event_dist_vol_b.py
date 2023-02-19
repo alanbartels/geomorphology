@@ -35,10 +35,9 @@ def event_stats(first_tp, second_tp, spec_path, input_path):
         # method on the grid object
         grid.load_events(slice, first_tp, second_tp)
 
-    net_vol = 0
-    gross_vol = 0
-    gain_count = 0
-    loss_count = 0
+    event_vol = []
+    event_height = []
+
 
     # make loop that iterates over all events
     for col_key in grid.voxels.keys():
@@ -46,30 +45,23 @@ def event_stats(first_tp, second_tp, spec_path, input_path):
             curr_event = grid.voxels[col_key][event_key]
             # Check for Missing event, if event is instance of event class
             if isinstance(curr_event, c_voxels.Event):
-                if curr_event.is_gain():
-                    gain_count += len(list(curr_event.voxels.keys()))
-                else:
-                    loss_count += len(list(curr_event.voxels.keys()))
-                net_vol += curr_event.get_volume()
-                gross_vol += abs(curr_event.get_volume())
+                event_vol.append(curr_event.get_volume())
+                event_height.append(curr_event.get_mean_height())
+    return [event_vol, event_height]
 
-    print(f'For {first_tp} to {second_tp} there was a net vol_change of {net_vol} m^3.')
-    print(f'For {first_tp} to {second_tp} there was a gross vol_change of {gross_vol} m^3.')
-    print(f'For {first_tp} to {second_tp} there was gain in {gain_count} voxels.')
-    print(f'For {first_tp} to {second_tp} there was loss in {loss_count} voxels.')
-    print(f'For {first_tp} to {second_tp} there was change in {gain_count + loss_count} voxels')
 
 # Establishing the necessary paths
 spec_path = Path(r'C:\UMB\Geomorphology\support\grid_rainsford')
 input_path = Path(r'C:\UMB\Geomorphology\input\07_top_bot_sliced_trimmed_rotated_pointcloud')
 
 
-timepoint_list = [('TP1', 'TP2'),
-                  ('TP1', 'TP3'),
-                  ('TP2', 'TP3'),
-                  ('TP2', 'TP4'),
-                  ('TP3', 'TP4'),
-                  ('TP1', 'TP4')]
+# timepoint_list = [('TP1', 'TP2'),
+#                   ('TP1', 'TP3'),
+#                   ('TP2', 'TP3'),
+#                   ('TP2', 'TP4'),
+#                   ('TP3', 'TP4'),
+#                   ('TP1', 'TP4')]
+timepoint_test = [('TP1', 'TP2')]
 
-for timepoint_pair in timepoint_list:
+for timepoint_pair in timepoint_test:
     event_stats(timepoint_pair[0], timepoint_pair[1], spec_path, input_path)

@@ -1052,6 +1052,7 @@ class Event:
         for row in self.voxels.keys():
             # Add the change
             self.volume += self.voxels[row]
+        self.volume = self.grid.get_voxel_volume(self.volume)
 
     def get_volume(self):
         # If volume is not set
@@ -1060,6 +1061,12 @@ class Event:
             self.set_volume()
         # Return the volume
         return self.volume
+
+    def is_gain(self):
+        if self.type == 'Gain':
+            return True
+        elif self.type == 'Loss':
+            return False
 
     # Return the mean height of voxels for the event
     def get_mean_height(self):

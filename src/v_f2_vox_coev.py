@@ -1,3 +1,4 @@
+import json
 import c_voxels
 import logging
 import datetime
@@ -21,52 +22,88 @@ logging.basicConfig(filename=f'C:/UMB/Geomorphology/logs/{datetime.datetime.now(
 
 # Establishing the necessary paths
 spec_path = Path(r'C:\UMB\Geomorphology\support\grid_rainsford')
-input_path = Path(r'C:\UMB\Geomorphology\input\07_top_bot_sliced_trimmed_rotated_pointcloud')
+input_path = Path(r'C:\UMB\Geomorphology\output\Rainsford Geomorphology\slice_timepoint')
+# iterate over timepoints, then slices, and then range of coefficient of variations within each timepoint
+# for each timepoint, code is under
 
-first_tp = 'TP1'
-second_tp = 'TP2'
+timepoint_list = ['TP1', 'TP2', 'TP3', 'TP4']
+# box_plot_stats = [min, l_quart, med, u_quart, max]
+cv_list = []
+total_voxel_list = []
 
-# Make a Grid object
-grid = c_voxels.Grid(spec_path=spec_path,
-                     input_path=input_path)
+for timepoint in timepoint_list:
+    tp_cv_list = []
+    tp_voxel_count = 0
+    for slice_num in list(range(0, 23)):
+        slice = str(slice_num)
 
-for slice_num in list(range(0, 23)):
+        while len(slice) < 2:
+            slice = '0' + slice
+        file_path = Path(input_path, f'{slice}_{timepoint}.json')
 
-    slice = str(slice_num)
+        with open(file_path, 'r') as f:
+            # Load input dictionary
+            input_dict = json.load(f)
+        for col_key in input_dict['Voxels']:
+            for row_key in input_dict['Voxels'][col_key].keys():
+                voxel_values = input_dict['Voxels'][col_key][row_key][0]
+                if len(input_dict['Voxels'][col_key][row_key]) > 2:
+                    scan_pos = input_dict['Voxels'][col_key][row_key][2]
+                    # If more than 1 key in dictionary or if there is only one scan position, does it have more than one point
+                    if len(list(scan_pos.keys())) > 1 or scan_pos[list(scan_pos.keys())[0]] > 1:
+                        voxel_cv = voxel_values[-1]/voxel_values[2]
+                        tp_cv_list.append(voxel_cv)
+                        tp_voxel_count += 1
+                elif voxel_values[0] != voxel_values[1]:
+                    voxel_cv = voxel_values[-1] / voxel_values[2]
+                    tp_cv_list.append(voxel_cv)
+                    tp_voxel_count += 1
+    cv_list.append(tp_cv_list)
+    total_voxel_list.append(tp_voxel_count)
 
-    while len(slice) < 2:
-        slice = '0' + slice
+# Start a plot
+fig = plt.figure(figsize=(10, 6))
 
-    grid.load_events(slice, first_tp, second_tp)
+# SUBPLOT 1: Number of Events BAR CHART TP2 - TP1
+ax = fig.add_subplot(1, 1, 1)
 
+box_dict = ax.boxplot(cv_list)
+outlier_percent_list = []
+outlier_max_list = []
 
-# Event counts
-tp1_tp2_event_counts = []
-# For each column
-for col_key in grid.voxels.keys():
-    tp1_tp2_event_counts.append(len(list(grid.voxels[col_key].keys())))
+for box, voxel_total in zip(box_dict['fliers'], total_voxel_list):
+    print(len(box.get_ydata(orig=True)))
+    outlier_percent_list.append((len(box.get_ydata(orig=True)) / voxel_total) * 100)
+    outlier_max_list.append((np.max(box.get_ydata(orig=True))))
+ax.remove()
 
-print(f'For TP1 to TP2 there was a mean of {grid.get_mean_event_count_per_col()} events per voxel column.')
+ax = fig.add_subplot(1, 1, 1)
 
-first_tp = 'TP1'
-second_tp = 'TP4'
+box_dict = ax.boxplot(cv_list, showfliers=False)
 
-# Make a Grid object
-grid = c_voxels.Grid(spec_path=spec_path,
-                     input_path=input_path)
-
-for slice_num in list(range(0, 23)):
-
-    slice = str(slice_num)
-
-    while len(slice) < 2:
-        slice = '0' + slice
-
-    grid.load_events(slice, first_tp, second_tp)
+ax.set_title('CV of Point Distance within Voxels per Timepoint')
+ax.set_ylabel('Coefficient of Variation')
+ax.set_xlabel('Timepoint')
+ax.yaxis.set_major_formatter(mpl.ticker.FormatStrFormatter('%.2e'))
+(y_min, y_max) = ax.get_ylim()
+ax.set_ylim((y_min, y_max + 0.00025))
 
 
-# Event counts
-tp1_tp4_event_counts = []
-# For each column
-for col_key in grid.voxels.keys():
-    tp1_tp4_event_counts.append(len(list(grid.voxels[col_key].keys())))
+skip = True
+for whisker in box_dict['whiskers']:
+    if skip:
+        skip = False
+        continue
+    else:
+        skip = True
+    #print(whisker.get_ydata())
+    ax.text(whisker.get_xdata()[0],
+            whisker.get_ydata()[1] + 0.00002,
+            f'Outliers:\n{np.around(outlier_percent_list.pop(0), decimals=2)}'
+            f'% of N\nMax: {np.around(outlier_max_list.pop(0), decimals=2)}',
+            horizontalalignment='center')
+#for whisker, timepoint in zip(box_dict['whiskers'], timepoint_list):
+#   print(whisker.get_ydata(orig=True))
+
+plt.show()
+
