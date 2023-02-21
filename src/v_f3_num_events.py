@@ -76,29 +76,31 @@ print(f'For TP1 to TP4 there was a mean of {grid.get_mean_event_count_per_col()}
 fig = plt.figure(figsize=(10, 6))
 
 # SUBPLOT 1: Number of Events BAR CHART TP2 - TP1
-ax = fig.add_subplot(2, 2, 1)
+ax = fig.add_subplot(1, 1, 1)
 
 ax.boxplot([tp1_tp2_event_counts,
             tp1_tp4_event_counts])
 
-ax.set_title('Subplot 1')
+ax.set_title('Mean Number of G/L Events per Voxel Column per Timepoint Pair')
+ax.set_ylabel('Number of G/L events per Voxel Column')
+ax.set_xticklabels(['TP1 to TP2', 'TP1 to TP4'])
 
-# SUBPLOT 2: BAR CHART TP4 - TP1
-ax2 = fig.add_subplot(2, 2, 2)
-
-ax2.scatter(list(range(0, len(tp1_tp4_event_counts))),
-            tp1_tp4_event_counts, s=1, c='r')
-
-ax2.scatter(list(range(0, len(tp1_tp2_event_counts))),
-            tp1_tp2_event_counts, s=2, c='b')
-
-# SUBPLOT 3: HISTOGRAM
-
-ax3 = fig.add_subplot(2, 2, 3)
-
-ax3.hist([tp1_tp2_event_counts,
-            tp1_tp4_event_counts], density=True)
-
-# SHOW THE PLOT
+# # SUBPLOT 2: BAR CHART TP4 - TP1
+# ax2 = fig.add_subplot(2, 2, 2)
+#
+# ax2.scatter(list(range(0, len(tp1_tp4_event_counts))),
+#             tp1_tp4_event_counts, s=1, c='r')
+#
+# ax2.scatter(list(range(0, len(tp1_tp2_event_counts))),
+#             tp1_tp2_event_counts, s=2, c='b')
+#
+# # SUBPLOT 3: HISTOGRAM
+#
+# ax3 = fig.add_subplot(2, 2, 3)
+#
+# ax3.hist([tp1_tp2_event_counts,
+#             tp1_tp4_event_counts], density=True)
+#
+# # SHOW THE PLOT
 
 plt.show()

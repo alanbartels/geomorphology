@@ -19,7 +19,7 @@ logging.basicConfig(filename=f'C:/UMB/Geomorphology/logs/{datetime.datetime.now(
                     format=' %(levelname)s - %(asctime)s - %(message)s',
                     level=logging.DEBUG)
 
-# Function that returns a list of lists, event_vol and event_height, for a timepoint pair
+
 def event_stats(first_tp, second_tp, spec_path, input_path):
     # Make a Grid object
     grid = c_voxels.Grid(spec_path=spec_path,
@@ -35,37 +35,48 @@ def event_stats(first_tp, second_tp, spec_path, input_path):
         # method on the grid object
         grid.load_events(slice, first_tp, second_tp)
 
-    event_vol = []
-    event_height = []
-
-    # make loop that iterates over all events
+    event_count_list = []
     for col_key in grid.voxels.keys():
-        for event_key in grid.voxels[col_key].keys():
-            curr_event = grid.voxels[col_key][event_key]
-            # Check for Missing event, if event is instance of event class
-            if isinstance(curr_event, c_voxels.Event):
-                event_vol.append(curr_event.get_volume())
-                event_height.append(curr_event.get_mean_height())
-    return [event_vol, event_height]
+        event_count_list.append(len(list(grid.voxels[col_key].keys())))
+    print(
+        f'For {first_tp} to {second_tp} there was a mean of {grid.get_mean_event_count_per_col()} events per voxel column.')
 
+    return event_count_list
 
 # Establishing the necessary paths
 spec_path = Path(r'C:\UMB\Geomorphology\support\grid_rainsford')
 input_path = Path(r'C:\UMB\Geomorphology\input\07_top_bot_sliced_trimmed_rotated_pointcloud')
 
+timepoint_list = [('TP1', 'TP2'),
+                  ('TP2', 'TP3'),
+                  ('TP3', 'TP4'),
+                  ('TP1', 'TP3'),
+                  ('TP2', 'TP4'),
+                  ('TP1', 'TP4')]
 
-# timepoint_list = [('TP1', 'TP2'),
-#                   ('TP1', 'TP3'),
-#                   ('TP2', 'TP3'),
-#                   ('TP2', 'TP4'),
-#                   ('TP3', 'TP4'),
-#                   ('TP1', 'TP4')]
-timepoint_test = [('TP1', 'TP2')]
+x_labels = ['TP1 to TP2', 'TP2 to TP3', 'TP3 to TP4', 'TP1 to TP3', 'TP2 to TP4', 'TP1 to TP4']
+#timepoint_test = [('TP1', 'TP2')]
 
-# List of timepoint_stati
-tp_pair_stats_list = []
-for timepoint_pair in timepoint_test:
-    tp_pair_stats_list.append(event_stats(timepoint_pair[0], timepoint_pair[1], spec_path, input_path))
+count_list = []
 
-for timepoint_pair in tp_pair_stats_list:
-    for event in tp_pair_stats_list:
+for timepoint_pair in timepoint_list:
+    tp_count_list = event_stats(timepoint_pair[0], timepoint_pair[1], spec_path, input_path)
+    count_list.extend(tp_count_list)
+
+# Start a plot
+fig = plt.figure(figsize=(10, 6))
+
+# SUBPLOT 1: Number of Events BAR CHART TP2 - TP1
+ax = fig.add_subplot(1, 1, 1)
+
+
+ax.boxplot(count_list, showfliers=False)
+
+ax.set_title('Absolute Volume of Events per Timepoint Pair')
+ax.set_ylabel('Volume (m^3)')
+ax.set_xlabel('Timepoint Pair')
+ax.set_xticklabels(x_labels)
+
+# SHOW THE PLOT
+
+plt.show()
