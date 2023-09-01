@@ -629,6 +629,15 @@ class Grid:
         # Return the mean
         return np.mean(event_counts)
 
+    def get_median_event_count_per_col(self):
+        # Event counts
+        event_counts = []
+        # For each column
+        for col_key in self.voxels.keys():
+            event_counts.append(len(list(self.voxels[col_key].keys())))
+        # Return the median
+        return np.median(event_counts)
+
     def get_event_summary(self, slice, first_tp, second_tp):
         # Make sure the timepoints are ordered correctly
         first_tp, second_tp = self.order_timepoints(first_tp, second_tp)

@@ -39,7 +39,8 @@ def event_stats(first_tp, second_tp, spec_path, input_path):
     for col_key in grid.voxels.keys():
         event_count_list.append(len(list(grid.voxels[col_key].keys())))
     print(
-        f'For {first_tp} to {second_tp} there was a mean of {grid.get_mean_event_count_per_col()} events per voxel column.')
+        f'For {first_tp} to {second_tp} there was a mean of {grid.get_mean_event_count_per_col()} events per voxel column.\n'
+        f'For {first_tp} to {second_tp} there was a median of {grid.get_median_event_count_per_col()} events per voxel column.')
 
     return event_count_list
 

@@ -81,7 +81,7 @@ ax = fig.add_subplot(1, 1, 1)
 ax.boxplot([tp1_tp2_event_counts,
             tp1_tp4_event_counts])
 
-ax.set_title('Mean Number of G/L Events per Voxel Column per Timepoint Pair')
+ax.set_title('Number of G/L Events per Voxel Column per Timepoint Pair')
 ax.set_ylabel('Number of G/L events per Voxel Column')
 ax.set_xticklabels(['TP1 to TP2', 'TP1 to TP4'])
 

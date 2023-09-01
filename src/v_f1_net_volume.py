@@ -4,6 +4,7 @@ import datetime
 from pathlib import Path
 from matplotlib import pyplot as plt
 import matplotlib as mpl
+import h_nonveg_slice as nv
 import numpy as np
 
 # Set matplotlib defaults for fonts

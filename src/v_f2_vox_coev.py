@@ -80,6 +80,10 @@ ax.remove()
 ax = fig.add_subplot(1, 1, 1)
 
 box_dict = ax.boxplot(cv_list, showfliers=False)
+for medline in box_dict['medians']:
+    linedata = medline.get_ydata()
+    median = linedata[0]
+    print(f'The median CV is {median}')
 
 ax.set_title('CV of Point Y-Position within Voxels per Timepoint')
 ax.set_ylabel('Coefficient of Variation')

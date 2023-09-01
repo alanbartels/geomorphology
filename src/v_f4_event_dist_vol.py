@@ -106,6 +106,11 @@ ax.remove()
 ax = fig.add_subplot(2, 1, 1)
 
 box_dict = ax.boxplot(vol_list, showfliers=False)
+# Printing out median volumes to timepoint pairs
+for medline in box_dict['medians']:
+    linedata = medline.get_ydata()
+    median = linedata[0]
+    print(f'The median volume is {median}')
 
 ax.set_title('Absolute Volume of Events per Timepoint Pair')
 ax.set_ylabel('Volume (m^3)')
@@ -134,6 +139,13 @@ for whisker in box_dict['whiskers']:
 ax2 = fig.add_subplot(2, 1, 2)
 
 ax2.boxplot(height_list)
+box_dict2 = ax2.boxplot(height_list, showfliers=False)
+
+# Printing out median event height of timepoint pairs
+for medline in box_dict2['medians']:
+    linedata = medline.get_ydata()
+    median = linedata[0]
+    print(f'The median event height is {median}')
 
 ax2.set_title('Height of Events per Timepoint Pair')
 ax2.set_ylabel('Height (m) ')
